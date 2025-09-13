@@ -57,12 +57,17 @@ def speak(text):
 # make logs dir
 os.makedirs(LOGS_DIR, exist_ok=True)
 
-def append_log(line):
+def append_log(line, mode="offline"):
     ts = datetime.datetime.now().isoformat(sep=' ', timespec='seconds')
+    entry = f"{ts} [{mode.upper()}] - {line}\n"
+
     with open(os.path.join(LOGS_DIR, "commands.txt"), "a", encoding="utf-8") as f:
-        f.write(f"{ts} - {line}\n")
+        f.write(entry)
     with open(COMMAND_LOG, "a", encoding="utf-8") as f:
-        f.write(line + "\n")
+        f.write(entry)
+
+    print(entry.strip())
+
 
 # ---------------------- ASR INIT ----------------------
 vosk_model = None
@@ -295,18 +300,18 @@ def execute_git_sequence(cmds):
             return False
     return True
 
-def push_current_branch():
+def push_current_branch(mode="offline"):
     br = current_branch()
-    # use safe push: origin <branch>
     rc, out = run_cmd(["git", "push", "origin", br])
     if rc == 0:
         speak(f"Pushed to origin {br}")
-        append_log(f"push -> origin/{br}")
+        append_log(f"push -> origin/{br}", mode=mode)
         return True
     else:
         speak("Push failed. Check credentials or remote.")
-        append_log(f"PUSH FAILED -> origin/{br} : {out}")
+        append_log(f"PUSH FAILED -> origin/{br} : {out}", mode=mode)
         return False
+
 
 # ---------------------- MAIN LOOP ----------------------
 def main():
@@ -336,7 +341,7 @@ def main():
             text = hybrid_listen(mode=mode)
             if not text:
                 continue
-            append_log(text)
+            append_log(f"Recognized: {text}", mode=mode)
             print("Recognized:", text)
 
             # mode switching voice commands
@@ -374,7 +379,7 @@ def main():
                 # if user said push, do push_current_branch() to ensure origin/branch
                 push_current_branch()
            
-            append_log("EXECUTED: " + " | ".join(cmds))
+            append_log("EXECUTED: " + " | ".join(cmds), mode=mode)
 
     except KeyboardInterrupt:
         speak("Stopped by keyboard.")

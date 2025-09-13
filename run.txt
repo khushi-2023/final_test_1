@@ -54,6 +54,9 @@ git init
 
 ```powershell
 git remote add origin https://github.com/khushi-2023/voice_git_automation.git
+to change ************************************************************
+git remote set-url origin https://github.com/NEW_USERNAME/NEW_REPO.git
+
 ```
 
 Check:
