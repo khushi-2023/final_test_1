@@ -84,59 +84,49 @@ if whisper is not None:
 
 # ---------------------- UTIL: record small snippet ----------------------
 def record_wav(filename="fallback.wav", duration=3, fs=SAMPLE_RATE):
-    """Record short snippet (used for fallback or voice auth)."""
-    speak("Recording audio...")
+    """Record short snippet quickly (used for fallback/whisper)."""
     rec = sd.rec(int(duration * fs), samplerate=fs, channels=1, dtype='int16')
     sd.wait()
-    data = rec.tobytes()
     with wave.open(filename, "wb") as wf:
         wf.setnchannels(1)
         wf.setsampwidth(2)
         wf.setframerate(fs)
-        wf.writeframes(data)
-    speak("Recording saved.")
+        wf.writeframes(rec.tobytes())
     return filename
 
+
 # ---------------------- OFFLINE ASR (Vosk streaming) ----------------------
-def offline_asr_vosk(timeout=6):
-    """Listen via PyAudio -> Vosk streaming. Returns recognized text or ''."""
+import queue
+q = queue.Queue()
+
+def callback(indata, frames, time, status):
+    if status:
+        print(status)
+    q.put(bytes(indata))
+
+def offline_asr_vosk(timeout=5):
+    """Listen offline with Vosk (streaming via sounddevice)."""
     if vosk_model is None:
         return ""
     rec = KaldiRecognizer(vosk_model, SAMPLE_RATE)
-    pa = pyaudio.PyAudio()
-    try:
-        stream = pa.open(format=pyaudio.paInt16,
-                         channels=1,
-                         rate=SAMPLE_RATE,
-                         input=True,
-                         frames_per_buffer=4096)
-        stream.start_stream()
+    result_text = ""
+
+    with sd.RawInputStream(samplerate=SAMPLE_RATE, blocksize=8000,
+                           dtype="int16", channels=1, callback=callback):
         speak("Listening (offline)... speak now.")
         start = time.time()
-        text = ""
-        while True:
-            data = stream.read(4096, exception_on_overflow=False)
+        while time.time() - start < timeout:
+            data = q.get()
             if rec.AcceptWaveform(data):
                 res = json.loads(rec.Result())
-                text = res.get("text", "").strip()
+                result_text = res.get("text", "")
                 break
-            # stop if timeout
-            if time.time() - start > timeout:
-                # try partial
-                pres = json.loads(rec.PartialResult())
-                text = pres.get("partial", "").strip()
-                break
-    except Exception as e:
-        print("Vosk streaming error:", e)
-        text = ""
-    finally:
-        try:
-            stream.stop_stream()
-            stream.close()
-        except Exception:
-            pass
-        pa.terminate()
-    return text
+        if not result_text:
+            final = json.loads(rec.FinalResult())
+            result_text = final.get("text", "")
+    return result_text.strip()
+
+
 
 # ---------------------- CLOUD (Google) ASR ----------------------
 def cloud_asr_google(timeout=6):
@@ -171,27 +161,25 @@ def whisper_transcribe_from_file(filename="fallback.wav"):
 
 # ---------------------- HYBRID ASR ----------------------
 def hybrid_listen(mode="offline"):
-    """Return recognized text (lowercase) or ''."""
+    """Hybrid listener: 
+       - Offline mode → Vosk, fallback Whisper 
+       - Online mode → Google only 
+    """
     text = ""
 
     if mode == "offline":
-        # Vosk first
         text = offline_asr_vosk(timeout=5)
         if not text:
-            # fallback → Whisper
+            # fallback to Whisper
             record_wav("fallback.wav", duration=3)
             text = whisper_transcribe_from_file("fallback.wav")
 
     elif mode == "online":
-        # Google only (no fallback)
         text = cloud_asr_google(timeout=6)
 
-    else:
-        # default = whisper only
-        record_wav("fallback.wav", duration=3)
-        text = whisper_transcribe_from_file("fallback.wav")
+    return text.lower().strip()
 
-    return (text or "").lower().strip()
+
 
 
 # ---------------------- VOICE AUTH (simple MFCC) ----------------------
@@ -216,35 +204,61 @@ def authenticate_via_voice(timeout=3, threshold=55.0):
         return False
 
 # ---------------------- NLP -> git command parser ----------------------
+import re
+
 def parse_git_command(text):
-    text = text.lower()
-    # commit message "..." or commit message '...'
+    text = text.lower().strip()
+
+    # --- Commit with custom message (all files) ---
     m = re.search(r"commit (?:message )?[\"'](.+?)[\"']", text)
-    if "commit" in text and m:
+    if "commit" in text and m and "with file" not in text:
         message = m.group(1)
         return ["git add -A", f'git commit -m "{message}"']
+
+    # --- Commit specific file(s) ---
+    # Example: "commit dashboard.py" OR "commit main.py with message 'fix bug'"
+    m_file = re.search(r"commit ([\w\.\-]+)(?: with message [\"'](.+?)[\"'])?", text)
+    if m_file:
+        filename = m_file.group(1)
+        message = m_file.group(2) if m_file.group(2) else f"voice commit {filename}"
+        return [f"git add {filename}", f'git commit -m "{message}"']
+
+    # --- Commit all (default) ---
     if "commit" in text:
-        # default message
         return ["git add -A", 'git commit -m "voice commit"']
+
+    # --- Push ---
     if "push" in text:
-        return ["git push"]
+        return ["git push origin main"]
+
+    # --- Pull ---
     if "pull" in text:
         return ["git pull"]
+
+    # --- Status ---
     if "status" in text:
         return ["git status"]
+
+    # --- Create branch ---
     if "create branch" in text:
         b = re.search(r"create branch ([\w\-_]+)", text)
         if b:
             bn = b.group(1)
             return [f"git branch {bn}", f"git checkout {bn}"]
         return ["Unknown command"]
+
+    # --- Switch branch ---
     if "switch to" in text or "checkout" in text:
         b = re.search(r"(?:switch to|checkout) (?:branch )?([\w\-_]+)", text)
         if b:
             return [f"git checkout {b.group(1)}"]
+
+    # --- Undo last commit ---
     if "undo last commit" in text or "revert last commit" in text or "undo" in text:
         return ["git reset --soft HEAD~1"]
+
     return ["Unknown command"]
+
 
 # ---------------------- GIT HELPERS ----------------------
 def is_git_repo():
@@ -359,9 +373,7 @@ def main():
             if ok and any("push" in c for c in cmds):
                 # if user said push, do push_current_branch() to ensure origin/branch
                 push_current_branch()
-            elif ok and any("commit" in c for c in cmds):
-                # after commit, optionally push automatically
-                speak("Do you want to push? say 'push' to push now or continue.")
+           
             append_log("EXECUTED: " + " | ".join(cmds))
 
     except KeyboardInterrupt:

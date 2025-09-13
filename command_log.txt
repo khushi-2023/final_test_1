@@ -4,3 +4,22 @@ kuchh all
 exit
 get com
 commit all
+EXECUTED: git add -A | git commit -m "voice commit"
+post changes
+first changes
+changes
+kushal
+push all
+push -> origin/main
+EXECUTED: git push
+exit
+get some
+good at
+good how
+good status
+EXECUTED: git status
+lol
+comment on
+soon you saw my son i encourage
+exit
+huge commit
