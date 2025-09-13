@@ -1,0 +1,11 @@
+sounddevice
+numpy
+vosk
+SpeechRecognition
+whisper
+pyttsx3
+GitPython
+PyGithub
+pyaudio
+librosa
+scipy

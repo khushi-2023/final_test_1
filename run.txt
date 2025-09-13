@@ -1,0 +1,153 @@
+Perfect 👍 let’s make this **practical, step-by-step guide** so you can **install, connect to GitHub, and execute your Voice-Guided Git Automation project immediately**.
+
+---
+
+# 🚀 Step-by-Step Guide
+
+## 1️⃣ Install & Setup the Project
+
+### (a) Clone or Copy the Project
+
+Open **PowerShell / CMD** in your project folder location:
+
+```powershell
+git clone https://github.com/khushi-2023/voice_git_automation.git
+cd voice_git_automation
+```
+
+If you already have the project folder → just `cd` into it.
+
+---
+
+### (b) Create Virtual Environment
+
+```powershell
+python -m venv venv
+venv\Scripts\activate
+```
+
+(you’ll see `(venv)` in terminal)
+
+---
+
+### (c) Install Dependencies
+
+Inside activated venv:
+
+```powershell
+pip install -r requirements.txt
+```
+
+✅ This installs: `vosk`, `openai-whisper`, `SpeechRecognition`, `gitpython`, `streamlit`, `pyttsx3`, etc.
+
+---
+
+## 2️⃣ GitHub Connection (Local → Remote)
+
+### (a) Initialize Git Repo (if not done already)
+
+```powershell
+git init
+```
+
+### (b) Add Remote GitHub Repo
+
+```powershell
+git remote add origin https://github.com/khushi-2023/voice_git_automation.git
+```
+
+Check:
+
+```powershell
+git remote -v
+```
+
+You should see:
+
+```
+origin  https://github.com/khushi-2023/voice_git_automation.git (fetch)
+origin  https://github.com/khushi-2023/voice_git_automation.git (push)
+```
+
+---
+
+### (c) First Commit & Push
+
+```powershell
+git add .
+git commit -m "Initial commit - Voice Git Automation"
+git branch -M main
+git push -u origin main
+```
+
+👉 If GitHub rejects push because repo has README:
+
+```powershell
+git pull origin main --rebase
+git push origin main
+```
+
+---
+
+## 3️⃣ Run the Voice-Guided Git Automation
+
+### (a) Run Streamlit GUI
+
+```powershell
+streamlit run app.py
+```
+
+This opens a dashboard in your browser where logs + commands appear.
+
+---
+
+### (b) Run Voice Listener (Main App)
+
+In another terminal (same venv):
+
+```powershell
+python main.py
+```
+
+---
+
+## 4️⃣ Execute Git Commands by Voice
+
+Say:
+
+* **“status”** → runs `git status`
+* **“add all”** → runs `git add .`
+* **“commit message update feature”** → runs `git commit -m "update feature"`
+* **“push to GitHub”** → runs `git push origin main`
+* **“pull from GitHub”** → runs `git pull origin main`
+* **“create branch test”** → runs `git checkout -b test`
+* **“merge branch test”** → runs `git merge test`
+
+✅ System will:
+
+1. Recognize voice → text (Vosk/Whisper/Google)
+2. Map text → Git command
+3. Execute via GitPython/subprocess
+4. Show logs in Streamlit + speak result back.
+
+---
+
+## 5️⃣ Fast Execution Tips
+
+* Run **`main.py`** in parallel with **Streamlit GUI**.
+* Use **offline Vosk** for faster recognition (no internet).
+* Use **short commands** (“commit”, “push”, “pull”).
+* Make sure you are **inside a Git repo** before starting (`git status` should work).
+
+---
+
+✅ After setup, your workflow is simply:
+
+1. Activate venv → `venv\Scripts\activate`
+2. Start GUI → `streamlit run app.py`
+3. Start Voice Automation → `python main.py`
+4. Speak Git commands → see them **executed + logged + pushed to GitHub**.
+
+---
+
+Do you want me to also give you a **ready-to-run batch file (`run_voice_git.bat`)** so you just **double-click** to start everything at once (venv + Streamlit + Voice listener)?
