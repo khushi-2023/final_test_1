@@ -94,7 +94,7 @@ git push origin main
 ### (a) Run Streamlit GUI
 
 ```powershell
-streamlit run app.py
+streamlit run app.py  || streamlit run dashboard.py 
 ```
 
 This opens a dashboard in your browser where logs + commands appear.

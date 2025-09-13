@@ -2,3 +2,5 @@ commit all
 EXECUTED: git add -A | git commit -m "voice commit"
 kuchh all
 exit
+get com
+commit all
