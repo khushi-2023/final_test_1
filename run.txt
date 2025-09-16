@@ -156,4 +156,4 @@ Say:
 Do you want me to also give you a **ready-to-run batch file (`run_voice_git.bat`)** so you just **double-click** to start everything at once (venv + Streamlit + Voice listener)?
 
 
-eg:--jizjhcagzjcgzyucguizhcizhcjzgcuixzhci
+command:- commit, push, pull, status, create branch, switch to
